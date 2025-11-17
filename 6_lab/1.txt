@@ -1,0 +1,80 @@
+; Ввод значений A, B, D
+mvi c,1
+mvi d,1
+mvi b,1
+
+; A+3
+mov a,c
+adi 3
+mov c,a
+; D+3
+mov a,d
+adi 3
+mov d,a
+; B+3
+mov a,b
+adi 3
+mov b,a
+
+; (A+3)/(B+3)
+mov h,c
+mov e,b
+call DIV_SIGNED
+mov b,l
+
+; (D+3)/(A+3)
+mov h,d
+mov e,c
+call DIV_SIGNED
+mov d,l
+
+; (A+3)/(B+3) - (D+3)/(A+3)
+mov a,b
+sub d
+
+hlt
+
+div:
+; Сохраняю итоговый знак в первый бит l
+mov a, e
+ora h
+ani 80h
+mov l, a
+
+; Получаю модули
+mov a, e
+ani 80h 
+mov a, e
+jz skip_1
+xri ffh
+inr a
+mov e, a
+skip_1:
+
+mov a, h
+ani 80h 
+mov a, h
+jz skip_2
+xri ffh
+inr a
+mov h, a
+skip_2:
+
+; Основной цикл
+mov a, e 
+loop:
+sub h
+jc over
+inr l
+jnc loop
+
+over: 
+mov a, l
+ani 80h
+mov a, l
+jz skip_3
+ani 7fh
+dcr a
+xri ffh
+mov l, a
+skip_3:ret
