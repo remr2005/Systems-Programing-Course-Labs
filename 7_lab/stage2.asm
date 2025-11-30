@@ -25,6 +25,9 @@ start:
     call println
     mov ax, 3000
     call sleep
+
+    call readline
+    mov si, input_buffer
     
     jmp $
 
