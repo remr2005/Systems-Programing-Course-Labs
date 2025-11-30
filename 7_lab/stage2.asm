@@ -16,15 +16,15 @@ start:
     call print
     call strlen
 
-    mov bx, ax          ; сохраняем результат strlen
-    lea si, num_buf     ; адрес буфера для числа
+    mov bx, ax
+    lea si, num_buf
     call itoa
     call println
 
     ; Таймер
     mov si, sleep_msg
     call println
-    mov ax, 3000
+    mov ax, 10000
     call sleep
 
     ; Ввод строки
@@ -39,8 +39,8 @@ start:
     ;Ввод числа
     mov si, ask_int
     call print
-    call readint          ; → AX = число
-    mov bx, ax            ; BX = AX для itoa
+    call readint
+    mov bx, ax
     lea si, num_buf
     call itoa
 
@@ -103,7 +103,8 @@ strlen:
     ret
 
 ; -----------------------------------------------------
-; sleep(AX = миллисекунды)   BIOS таймер
+; sleep(AX = миллисекунды)
+; Использует INT 1Ah/AH=0, SeaBIOS совместимо
 ; -----------------------------------------------------
 sleep:
     push ax
@@ -111,20 +112,31 @@ sleep:
     push cx
     push dx
 
-    ; AX = миллисекунды → переводим в микросекунды
-    ; 1 ms = 1000 us
-    mov bx, ax           ; BX = миллисекунды
-    mov ax, 1000
-    mul bx               ; DX:AX = AX*BX = миллисекунды * 1000
-                         ; DX:AX теперь в микросекундах
+    ; преобразуем миллисекунды в тики (1 тик ≈ 55ms)
+    mov bx, ax
+    mov ax, 55
+    xor dx, dx
+    div ax          ; AX = тики, остаток в DX игнорируем
+    mov bx, ax      ; количество тиков ожидания
+    or bx, bx
+    jz .min_tick
+    jmp .got_ticks
+.min_tick:
+    mov bx, 1       ; минимум 1 тик
+.got_ticks:
 
-    ; Теперь DX:AX = количество микросекунд
-    ; BIOS ожидает CX:DX, где DX = младшие 16 бит, CX = старшие 16 бит
-    mov dx, ax           ; младшие 16 бит
-    mov cx, dx           ; старшие 16 бит
-    xor cx, cx           ; на всякий случай старшие = 0 для <65 секунд
-    mov ah, 0x86
-    int 0x15
+    ; читаем текущее количество тиков
+    mov ah, 0
+    int 1Ah         ; DX = тики от 00:00:00
+    mov cx, dx      ; запоминаем стартовое время
+
+.wait_loop:
+    mov ah, 0
+    int 1Ah         ; DX = текущее время
+    mov ax, dx
+    sub ax, cx      ; сколько тиков прошло
+    cmp ax, bx
+    jb .wait_loop   ; ещё не достигли целевого времени
 
     pop dx
     pop cx
@@ -132,14 +144,12 @@ sleep:
     pop ax
     ret
 
+
+
+
 ; -----------------------------------------------------
 ; readline → строка в input_buffer (макс 255)
 ; -----------------------------------------------------
-; readline: читает строку в input_buffer (макс 255)
-; Вход: нет (использует глобальный input_buffer)
-; Выход: input_buffer содержит нуль-терминированную строку
-; Сохраняет регистры: AX,BX,CX,DX,SI,DI
-
 readline:
     push ax
     push bx
@@ -261,14 +271,8 @@ itoa:
     ret
 
 num_buf times 6 db 0     ; буфер для числа (макс 5 цифр + 0)
-
-
 ; -----------------------------------------------------
 ; readint → AX  (читает целое число из строки)
-; -----------------------------------------------------
-readint:
-; -----------------------------------------------------
-; readint -> AX
 ; Читает строку (через readline) и парсит десятичное число.
 ; Возвращает 16-bit результат в AX.
 ; Сохраняет регистры: BX,CX,DX,SI (и т.д.)
