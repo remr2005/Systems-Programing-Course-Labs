@@ -28,6 +28,7 @@ start:
 
     call readline
     mov si, input_buffer
+    call println
     
     jmp $
 
@@ -114,27 +115,79 @@ sleep:
 ; -----------------------------------------------------
 ; readline → строка в input_buffer (макс 255)
 ; -----------------------------------------------------
+; readline: читает строку в input_buffer (макс 255)
+; Вход: нет (использует глобальный input_buffer)
+; Выход: input_buffer содержит нуль-терминированную строку
+; Сохраняет регистры: AX,BX,CX,DX,SI,DI
+
 readline:
     push ax
     push bx
+    push cx
+    push dx
     push si
+    push di
 
-    mov si, input_buffer
-    xor cx, cx
+    mov si, input_buffer   ; DS:SI -> куда писать
+    xor cx, cx             ; длина = 0
 
-.get:
-    mov ah, 0
-    int 0x16
-    cmp al, 13
+.read_loop:
+    mov ah, 0x00
+    int 0x16               ; BIOS: ждем клавишу, AL = ASCII
+
+    cmp al, 13             ; Enter?
     je .done
-    stosb
+
+    cmp al, 8              ; Backspace?
+    je .backspace
+
+    cmp cx, 255
+    jae .read_loop         ; переполнение буфера — игнорируем ввод
+
+    mov [si], al
+    inc si
     inc cx
-    jmp .get
+
+    ; эхо: INT 10h AH=0Eh (teletype). BH=page(0), BL=color(7)
+    mov ah, 0x0E
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    jmp .read_loop
+
+.backspace:
+    cmp cx, 0
+    je .read_loop
+    dec si
+    dec cx
+    ; вывести BS ' ' BS
+    mov ah, 0x0E
+    mov al, 8
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    mov al, ' '
+    int 0x10
+    mov al, 8
+    int 0x10
+    jmp .read_loop
 
 .done:
-    mov al, 0
-    stosb
+    mov byte [si], 0       ; нуль-терминатор
+
+    ; вывести CR LF
+    mov ah, 0x0E
+    mov al, 13
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    mov al, 10
+    int 0x10
+
+    pop di
     pop si
+    pop dx
+    pop cx
     pop bx
     pop ax
     ret
