@@ -24,7 +24,7 @@ start:
     ; Таймер
     mov si, sleep_msg
     call println
-    mov ax, 10000
+    mov ax, 3000
     call sleep
 
     ; Ввод строки
@@ -112,41 +112,21 @@ sleep:
     push cx
     push dx
 
-    ; преобразуем миллисекунды в тики (1 тик ≈ 55ms)
-    mov bx, ax
-    mov ax, 55
-    xor dx, dx
-    div ax          ; AX = тики, остаток в DX игнорируем
-    mov bx, ax      ; количество тиков ожидания
-    or bx, bx
-    jz .min_tick
-    jmp .got_ticks
-.min_tick:
-    mov bx, 1       ; минимум 1 тик
-.got_ticks:
+    mov bx, ax        ; BX = миллисекунды
+    mov ax, 1000
+    mul bx           ; DX:AX = μs
+    ; теперь DX:AX = время в микросекундах
 
-    ; читаем текущее количество тиков
-    mov ah, 0
-    int 1Ah         ; DX = тики от 00:00:00
-    mov cx, dx      ; запоминаем стартовое время
-
-.wait_loop:
-    mov ah, 0
-    int 1Ah         ; DX = текущее время
-    mov ax, dx
-    sub ax, cx      ; сколько тиков прошло
-    cmp ax, bx
-    jb .wait_loop   ; ещё не достигли целевого времени
+    mov cx, dx
+    mov dx, ax
+    mov ah, 86h
+    int 15h
 
     pop dx
     pop cx
     pop bx
     pop ax
     ret
-
-
-
-
 ; -----------------------------------------------------
 ; readline → строка в input_buffer (макс 255)
 ; -----------------------------------------------------
