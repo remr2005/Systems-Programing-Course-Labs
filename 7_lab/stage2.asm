@@ -8,9 +8,9 @@ ORG 0x7E00
 ; Все регистры сохраняются
 ; ----------------------------
 start:
-    mov ah, 0x00    ; функция BIOS: установить видеорежим
-    mov al, 0x03    ; 80x25 текстовый режим, цветной
-    int 0x10
+    mov ah, 0x00
+    mov al, 0x03
+    int 0x10 ; Очистка экрана
 
     mov si, len_msg
     call print
@@ -60,9 +60,9 @@ print:
     push si
 .next:
     lodsb
-    or al, al
-    jz .done
-    mov ah, 0x0E
+    or al, al 
+    jz .done ; Если байт нулевой то конец строки
+    mov ah, 0x0E ; ВЫводит символ al
     int 0x10
     jmp .next
 .done:
@@ -76,10 +76,10 @@ print:
 println:
     call print
     push ax
-    mov al, 13
+    mov al, 13 ; Переводит курсор в начало строки
     mov ah, 0x0E
     int 0x10
-    mov al, 10
+    mov al, 10 ; Переводит курсор на строку вниз
     mov ah, 0x0E
     int 0x10
     pop ax
@@ -104,7 +104,6 @@ strlen:
 
 ; -----------------------------------------------------
 ; sleep(AX = миллисекунды)
-; Использует INT 1Ah/AH=0, SeaBIOS совместимо
 ; -----------------------------------------------------
 sleep:
     push ax
@@ -112,15 +111,14 @@ sleep:
     push cx
     push dx
 
-    mov bx, ax        ; BX = миллисекунды
+    mov bx, ax
     mov ax, 1000
-    mul bx           ; DX:AX = μs
-    ; теперь DX:AX = время в микросекундах
+    mul bx; перевод милисекунд в микросекунды
 
-    mov cx, dx
+    mov cx, dx ; В dx:ax будет хранится время остановки в микросекундах
     mov dx, ax
     mov ah, 86h
-    int 15h
+    int 15h 
 
     pop dx
     pop cx
@@ -138,8 +136,8 @@ readline:
     push si
     push di
 
-    mov si, input_buffer   ; DS:SI -> куда писать
-    xor cx, cx             ; длина = 0
+    mov si, input_buffer
+    xor cx, cx
 
 .read_loop:
     mov ah, 0x00
