@@ -513,8 +513,9 @@ calculate_formula:
     push si
 
     ; Сохраняем исходные значения
-    mov si, ax
-    mov bx, cx
+    mov si, ax          ; si = A
+    mov bx, cx          ; bx = B
+    push dx             ; сохраняем D в стеке (dx будет изменен после idiv)
 
     ; Вычисляем (A+3)/(B+3)
     mov ax, si
@@ -523,9 +524,26 @@ calculate_formula:
     add cx, 3
     cmp cx, 0
     je .div_zero1
+    push ax             ; сохраняем делимое для проверки знака
+    push cx             ; сохраняем делитель
     cwd
     idiv cx
-    push ax
+    ; Корректировка для floor division
+    pop cx
+    pop bx              ; bx = исходное делимое
+    cmp dx, 0           ; проверяем остаток
+    je .no_corr1
+    ; Проверяем, что делимое и делитель разных знаков
+    push si
+    mov si, bx
+    xor si, cx          ; если знаки разные, старший бит будет 1
+    test si, 0x8000
+    pop si
+    jz .no_corr1        ; знаки одинаковые - коррекция не нужна
+    ; Знаки разные и есть остаток - нужна коррекция для floor division
+    dec ax
+.no_corr1:
+    push ax             ; сохраняем результат (A+3)/(B+3)
     jmp .second_part
 
 .div_zero1:
@@ -533,15 +551,35 @@ calculate_formula:
 
 .second_part:
     ; Вычисляем (D+3)/(A+3)
-    mov ax, dx
+    pop ax              ; ax = результат (A+3)/(B+3)
+    pop dx              ; dx = исходное D (восстанавливаем из стека)
+    push ax             ; сохраняем результат1 обратно
+    mov ax, dx          ; ax = D
     add ax, 3
-    mov cx, si
+    mov cx, si          ; cx = A
     add cx, 3
     cmp cx, 0
     je .div_zero2
+    push ax             ; сохраняем делимое
+    push cx             ; сохраняем делитель
     cwd
     idiv cx
-    mov dx, ax
+    ; Корректировка для floor division
+    pop cx
+    pop bx              ; bx = исходное делимое
+    cmp dx, 0           ; проверяем остаток
+    je .no_corr2
+    ; Проверяем, что делимое и делитель разных знаков
+    push si
+    mov si, bx
+    xor si, cx          ; если знаки разные, старший бит будет 1
+    test si, 0x8000
+    pop si
+    jz .no_corr2        ; знаки одинаковые - коррекция не нужна
+    ; Знаки разные и есть остаток - нужна коррекция для floor division
+    dec ax
+.no_corr2:
+    mov dx, ax          ; dx = результат (D+3)/(A+3)
     jmp .subtract
 
 .div_zero2:
@@ -549,8 +587,8 @@ calculate_formula:
 
 .subtract:
     ; Результат: (A+3)/(B+3) - (D+3)/(A+3)
-    pop ax
-    sub ax, dx
+    pop ax              ; ax = (A+3)/(B+3)
+    sub ax, dx          ; ax = (A+3)/(B+3) - (D+3)/(A+3)
 
     pop si
     pop dx
