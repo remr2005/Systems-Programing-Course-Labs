@@ -1,0 +1,1 @@
+qemu-system-i386 -fda floppy.img -vga std -display sdl,gl=on
