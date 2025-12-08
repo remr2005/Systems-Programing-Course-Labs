@@ -12,6 +12,9 @@ start:
     mov al, 0x03
     int 0x10
 
+    ; Инициализация ГПСЧ из системного времени
+    call init_random
+
     ; Запрос размера массивов
     mov si, ask_size_msg
     call print
@@ -283,6 +286,23 @@ readint:
     ret
 
 ; -----------------------------------------------------
+; Инициализация ГПСЧ из системного времени
+; -----------------------------------------------------
+init_random:
+    push ax
+    push cx
+    push dx
+    mov ah, 0x00
+    int 0x1A             ; BIOS: получить системное время в тиках (CX:DX)
+    mov ax, dx           ; используем младшие биты
+    add ax, cx           ; добавляем старшие биты для большей случайности
+    mov [rng_seed], ax
+    pop dx
+    pop cx
+    pop ax
+    ret
+
+; -----------------------------------------------------
 ; ГПСЧ: мультипликативный генератор (Xorshift)
 ; Возвращает случайное число в AX (0..65535)
 ; -----------------------------------------------------
@@ -500,7 +520,8 @@ calculate_formula:
     add cx, 3
     cmp cx, 0
     je .div_zero1
-    call signed_div
+    cwd
+    idiv cx
     push ax
     jmp .second_part
 
@@ -515,7 +536,8 @@ calculate_formula:
     add cx, 3
     cmp cx, 0
     je .div_zero2
-    call signed_div
+    cwd
+    idiv cx
     mov dx, ax
     jmp .subtract
 
@@ -530,65 +552,6 @@ calculate_formula:
     pop si
     pop dx
     pop cx
-    pop bx
-    ret
-
-; -----------------------------------------------------
-; Деление со знаком: AX / CX → AX
-; -----------------------------------------------------
-signed_div:
-    push bx
-    push dx
-    push si
-
-    mov si, ax
-    mov bx, cx
-
-    ; Проверка знаков
-    test si, 0x8000
-    jnz .neg_dividend
-    test bx, 0x8000
-    jnz .neg_divisor
-
-    ; Оба положительные
-    mov ax, si
-    xor dx, dx
-    div bx
-    jmp .done
-
-.neg_dividend:
-    test bx, 0x8000
-    jnz .both_neg
-
-    ; Делимое отрицательное, делитель положительный
-    neg si
-    mov ax, si
-    xor dx, dx
-    div bx
-    neg ax
-    jmp .done
-
-.neg_divisor:
-    ; Делимое положительное, делитель отрицательный
-    neg bx
-    mov ax, si
-    xor dx, dx
-    div bx
-    neg ax
-    jmp .done
-
-.both_neg:
-    ; Оба отрицательные
-    neg si
-    neg bx
-    mov ax, si
-    xor dx, dx
-    div bx
-    jmp .done
-
-.done:
-    pop si
-    pop dx
     pop bx
     ret
 
