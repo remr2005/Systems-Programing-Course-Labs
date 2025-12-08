@@ -341,14 +341,17 @@ generate_arrays:
 
 .loop:
     call random
+    cbw                   ; расширяем знак AL в AX (-128..127)
     mov [si], ax
     add si, 2
 
     call random
+    cbw
     mov [di], ax
     add di, 2
 
     call random
+    cbw
     mov [bx], ax
     add bx, 2
 
