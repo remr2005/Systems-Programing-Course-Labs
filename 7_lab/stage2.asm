@@ -156,7 +156,6 @@ readline:
     inc si
     inc cx
 
-    ; эхо: INT 10h AH=0Eh (teletype). BH=page(0), BL=color(7)
     mov ah, 0x0E
     mov bh, 0x00
     mov bl, 0x07
@@ -181,7 +180,7 @@ readline:
     jmp .read_loop
 
 .done:
-    mov byte [si], 0       ; нуль-терминатор
+    mov byte [si], 0
 
     ; вывести CR LF
     mov ah, 0x0E
@@ -251,9 +250,6 @@ itoa:
 num_buf times 6 db 0     ; буфер для числа (макс 5 цифр + 0)
 ; -----------------------------------------------------
 ; readint → AX  (читает целое число из строки)
-; Читает строку (через readline) и парсит десятичное число.
-; Возвращает 16-bit результат в AX.
-; Сохраняет регистры: BX,CX,DX,SI (и т.д.)
 ; -----------------------------------------------------
 readint:
     push bx

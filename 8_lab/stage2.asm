@@ -524,25 +524,8 @@ calculate_formula:
     add cx, 3
     cmp cx, 0
     je .div_zero1
-    push ax             ; сохраняем делимое для проверки знака
-    push cx             ; сохраняем делитель
     cwd
     idiv cx
-    ; Корректировка для floor division
-    pop cx
-    pop bx              ; bx = исходное делимое
-    cmp dx, 0           ; проверяем остаток
-    je .no_corr1
-    ; Проверяем, что делимое и делитель разных знаков
-    push si
-    mov si, bx
-    xor si, cx          ; если знаки разные, старший бит будет 1
-    test si, 0x8000
-    pop si
-    jz .no_corr1        ; знаки одинаковые - коррекция не нужна
-    ; Знаки разные и есть остаток - нужна коррекция для floor division
-    dec ax
-.no_corr1:
     push ax             ; сохраняем результат (A+3)/(B+3)
     jmp .second_part
 
@@ -560,25 +543,8 @@ calculate_formula:
     add cx, 3
     cmp cx, 0
     je .div_zero2
-    push ax             ; сохраняем делимое
-    push cx             ; сохраняем делитель
     cwd
     idiv cx
-    ; Корректировка для floor division
-    pop cx
-    pop bx              ; bx = исходное делимое
-    cmp dx, 0           ; проверяем остаток
-    je .no_corr2
-    ; Проверяем, что делимое и делитель разных знаков
-    push si
-    mov si, bx
-    xor si, cx          ; если знаки разные, старший бит будет 1
-    test si, 0x8000
-    pop si
-    jz .no_corr2        ; знаки одинаковые - коррекция не нужна
-    ; Знаки разные и есть остаток - нужна коррекция для floor division
-    dec ax
-.no_corr2:
     mov dx, ax          ; dx = результат (D+3)/(A+3)
     jmp .subtract
 
