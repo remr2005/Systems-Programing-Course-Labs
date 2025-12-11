@@ -296,6 +296,10 @@ init_random:
     int 0x1A             ; BIOS: получить системное время в тиках (CX:DX)
     mov ax, dx           ; используем младшие биты
     add ax, cx           ; добавляем старшие биты для большей случайности
+    cmp ax, 0
+    jne .not_zero
+    mov ax, 1            ; если 0, устанавливаем 1 (LFSR не может быть 0)
+.not_zero:
     mov [rng_seed], ax
     pop dx
     pop cx
@@ -303,24 +307,47 @@ init_random:
     ret
 
 ; -----------------------------------------------------
-; ГПСЧ: мультипликативный генератор (Xorshift)
+; ГПСЧ: LFSR (Linear Feedback Shift Register)
+; Полином: x^16 + x^14 + x^13 + x^11 + 1
 ; Возвращает случайное число в AX (0..65535)
 ; -----------------------------------------------------
 random:
     push bx
+    push cx
     push dx
     mov ax, [rng_seed]
+    
+    ; Проверяем, что seed не равен 0 (LFSR не может быть 0)
+    cmp ax, 0
+    jne .not_zero
+    mov ax, 1            ; если 0, устанавливаем 1
+.not_zero:
+    
+    ; Вычисляем новый бит: bit15 XOR bit13 XOR bit12 XOR bit10
     mov bx, ax
-    shl ax, 7
-    xor ax, bx
-    mov bx, ax
-    shr ax, 9
-    xor ax, bx
-    mov bx, ax
-    shl ax, 8
-    xor ax, bx
+    mov cx, ax
+    mov dx, ax
+    
+    ; Извлекаем биты для обратной связи
+    shr bx, 15           ; bx = bit15
+    shr cx, 13           ; cx = bit13
+    shr dx, 12           ; dx = bit12
+    shr ax, 10           ; ax = bit10
+    
+    ; XOR всех битов обратной связи
+    xor bx, cx
+    xor bx, dx
+    xor bx, ax
+    
+    ; Сдвигаем регистр влево и добавляем новый бит справа
+    mov ax, [rng_seed]
+    shl ax, 1            ; сдвиг влево
+    and bx, 1            ; берем только младший бит
+    or ax, bx            ; добавляем новый бит справа
+    
     mov [rng_seed], ax
     pop dx
+    pop cx
     pop bx
     ret
 

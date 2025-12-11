@@ -21,12 +21,6 @@ start:
     call itoa
     call println
 
-    ; Таймер
-    mov si, sleep_msg
-    call println
-    mov ax, 3000
-    call sleep
-
     ; Ввод строки
     mov si, ask_string
     call print
@@ -47,6 +41,13 @@ start:
     mov si, int_result
     call print
     mov si, num_buf
+    call println
+
+    call readline
+    mov si, input_buffer
+    call strlen
+    mov bx, ax
+    call itoa
     call println
 
 
@@ -247,7 +248,6 @@ itoa:
     pop ax
     ret
 
-num_buf times 6 db 0     ; буфер для числа (макс 5 цифр + 0)
 ; -----------------------------------------------------
 ; readint → AX  (читает целое число из строки)
 ; -----------------------------------------------------
@@ -310,3 +310,5 @@ ask_int     db "Enter number: ",0
 int_result  db "You entered number: ",0
 
 input_buffer times 256 db 0
+
+num_buf times 6 db 0     ; буфер для числа (макс 5 цифр + 0)
